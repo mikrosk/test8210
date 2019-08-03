@@ -232,7 +232,11 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		and.l	#$00ff00ff,d0			; d0.l: $00mm00ll
 		move.l	d0,(a4)+
 
-.offsets_done:	move.b	video_ram+1,$ffff8201.w
+.offsets_done:	move.l	plasma_320_8284,$ffff8284.w	; $8284 & 8286
+		move.l	plasma_320_8288,$ffff8288.w	; $8288 & 828a
+		;move.w	plasma_320_8210,$ffff8210.w	; $8210
+
+		move.b	video_ram+1,$ffff8201.w
 		move.b	video_ram+2,$ffff8203.w
 		move.b	video_ram+3,$ffff820d.w
 
@@ -259,9 +263,14 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		movem.l	(sp)+,d0-a4
 		rte
 
+; after last logo raster line
 my_timer_b1:	move.l	(a5)+,(a6)+
 
 		move.l	(a5)+,$120.w
+
+		move.l	plasma_256_8284,$ffff8284.w	; $8284 & 8286
+		move.l	plasma_256_8288,$ffff8288.w	; $8288 & 828a
+		;move.w	plasma_256_8210,$ffff8210.w	; $8210
 
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
@@ -294,6 +303,10 @@ my_timer_b2:	move.l	(a5)+,(a6)+
 my_timer_b3:	move.l	(a5)+,(a6)+
 
 		move.l	(a5)+,$120.w
+
+		move.l	plasma_320_8284,$ffff8284.w	; $8284 & 8286
+		move.l	plasma_320_8288,$ffff8288.w	; $8288 & 828a
+		;move.w	plasma_320_8210,$ffff8210.w	; $8210
 
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
