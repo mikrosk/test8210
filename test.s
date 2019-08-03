@@ -245,14 +245,11 @@ my_vbl:		movem.l	d0-a4,-(sp)
 
 		move.l	#224*4,pal_offset
 
-.done:		lea	plasma_buffer,a5
-		lea	$ffff9800.w,a6
-
-		movem.l	(sp)+,d0-a4
+.done:		movem.l	(sp)+,d0-a4
 		rte
 
 ; after last logo raster line
-my_timer_b0:	clr.l	$ffff9800.w
+my_timer_b0:	;clr.l	$ffff9800.w
 
 		move.l	plasma_64_8284,$ffff8284.w	; $8284 & 8286
 		move.l	plasma_64_8288,$ffff8288.w	; $8288 & 828a
@@ -265,14 +262,45 @@ my_timer_b0:	clr.l	$ffff9800.w
 		move.b	fuck+2(pc),$ffff8207.w
 		move.b	fuck+3(pc),$ffff8209.w
 
-		lea	plasma_buffer,a5
-		lea	$ffff9800.w,a6
+		lea	falcon_pal+4,a5
+		add.l	pal_offset,a5
+		lea	$ffff9804.w,a6
 
-		move.l	#my_timer_b1,$120
+		move.l	#my_timer_b01,$120.w
 
 		clr.b	$fffffa1b.w
 		move.b	#1,$fffffa21.w			; Timer B Data
 		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b01:	not.l	$ffff9800.w
+		REPT	7
+		move.l	(a5)+,(a6)+
+		ENDR
+
+		move.l	#my_timer_b02,$120.w
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b02:	not.l	$ffff9800.w
+		REPT	8
+		move.l	(a5)+,(a6)+
+		ENDR
+
+		move.l	#my_timer_b03,$120.w
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b03:	not.l	$ffff9800.w
+
+		move.l	#my_timer_b1,$120.w
+
+		lea	plasma_buffer,a5
+		lea	$ffff9800.w,a6
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
@@ -283,7 +311,7 @@ my_timer_b1:	move.l	(a5)+,(a6)+
 
 		move.l	plasma_256_8284,$ffff8284.w	; $8284 & 8286
 		move.l	plasma_256_8288,$ffff8288.w	; $8288 & 828a
-		;move.w	plasma_256_8210,$ffff8210.w	; $8210
+		move.w	plasma_256_8210,$ffff8210.w	; $8210
 
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
@@ -359,7 +387,7 @@ my_timer_b6:	move.l	(a5),(a6)
 
 		move.l	plasma_320_8284,$ffff8284.w	; $8284 & 8286
 		move.l	plasma_320_8288,$ffff8288.w	; $8288 & 828a
-		;move.w	plasma_320_8210,$ffff8210.w	; $8210
+		move.w	plasma_320_8210,$ffff8210.w	; $8210
 
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
