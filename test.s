@@ -8,10 +8,13 @@ SCREEN_DEPTH	EQU	4
 SCREENS		EQU	1
 
 TBCR_VALUE	EQU	%1000				; event mode
-TBDR_VALUE	EQU	1				; every TBDR_VALUE raster lines
+;TBDR_VALUE	EQU	1				; every TBDR_VALUE raster lines
 
-SCREEN_OFFSETS	EQU	256
-SIN_ENTRIES	EQU	256
+PLASMA_WIDTH	EQU	256
+PLASMA_HEIGHT	EQU	150
+
+LOGO_WIDTH	EQU	SCREEN_WIDTH
+LOGO_HEIGHT	EQU	50
 
 ; ------------------------------------------------------
 		SECTION	TEXT
@@ -49,8 +52,16 @@ begin:		movea.l	4(sp),a5			; address to basepage
 .clear_loop:	clr.l	(a0)+
 		dbra	d7,.clear_loop
 
+		lea	logo+16+16*3,a0
 		move.l	video_ram,a1
+		move.w	#LOGO_WIDTH*LOGO_HEIGHT*SCREEN_DEPTH/8/4-1,d7
+.logo_loop:	move.l	(a0)+,(a1)+
+		dbra	d7,.tube_loop
+
 		lea	tubes,a0
+		move.l	video_ram,a1
+		add.l	#64*1024,a1
+		move.l	a1,plasma_video_ram
 		move.w	#SCREENS*SCREEN_WIDTH*SCREEN_DEPTH/8/4-1,d7
 .tube_loop:	move.l	(a0)+,(a1)+
 		dbra	d7,.tube_loop
@@ -67,6 +78,30 @@ begin:		movea.l	4(sp),a5			; address to basepage
 		lea	falcon_pal+224*2*4,a1
 		move.w	#224,d7
 		bsr	convert_pal
+
+		lea	logo+16,a0
+		lea	logo_pal,a1
+		move.w	#16,d7
+		bsr	convert_pal
+
+		lea	res256+122+2,a0
+		lea	res320+122+2,a1
+		lea	res064+122+2,a2
+		move.w	(a0)+,plasma_256_8284
+		move.w	(a1)+,plasma_320_8284
+		move.w	(a2)+,plasma_64_8284
+		move.w	(a0)+,plasma_256_8286
+		move.w	(a1)+,plasma_320_8286
+		move.w	(a2)+,plasma_64_8286
+		move.w	(a0)+,plasma_256_8288
+		move.w	(a1)+,plasma_320_8288
+		move.w	(a2)+,plasma_64_8288
+		move.w	(a0)+,plasma_256_828a
+		move.w	(a1)+,plasma_320_828a
+		move.w	(a2)+,plasma_64_828a
+		move.w	(24,a0),plasma_256_8210
+		move.w	(24,a1),plasma_320_8210
+		move.w	(24,a2),plasma_64_8210
 
 		clr.l	-(sp)				; Super()
 		move.w	#$20,-(sp)			;
@@ -160,16 +195,16 @@ begin:		movea.l	4(sp),a5			; address to basepage
 my_vbl:		movem.l	d0-a4,-(sp)
 
 		clr.b	$fffffa1b.w
-		move.b	#TBDR_VALUE,$fffffa21.w		; Timer B Data
+		move.b	#LOGO_HEIGHT,$fffffa21.w	; Timer B Data
 		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
 
 		lea	falcon_pal,a1
 		add.l	pal_offset,a1
 		lea	plasma_buffer,a4
-		move.w	#SCREEN_HEIGHT-1,d7
+		move.w	#PLASMA_HEIGHT-1,d7
 
 .loop:		move.l	(a1)+,(a4)+
-		move.l	video_ram,d0			; d0.l: $00hhmmll
+		move.l	plasma_video_ram,d0		; d0.l: $00hhmmll
 		lsl.l	#8,d0				; d0.l: $hhmmll00
 		lsr.b	#8,d0				; d0.l: $hhmm00ll
 		and.l	#$00ff00ff,d0			; d0.l: $00mm00ll
@@ -177,15 +212,15 @@ my_vbl:		movem.l	d0-a4,-(sp)
 
 		dbra	d7,.loop
 
-.offsets_done:	lea	plasma_buffer,a5
-		lea	$ffff9800.w,a6
-		move.l	(a5)+,(a6)+			; $rrgg00bb
-		move.b	video_ram+1,$ffff8201.w
-		move.l	(a5)+,d0			; d0.l: $00mm00ll
-		swap	d0
-		move.b	d0,$ffff8203.w
-		swap	d0
-		move.b	d0,$ffff820d.w
+.offsets_done:	move.b	video_ram+1,$ffff8201.w
+		move.b	video_ram+2,$ffff8203.w
+		move.b	video_ram+3,$ffff820d.w
+
+		lea	logo_pal,a0
+		lea	$ffff9800.w,a1
+		moveq	#16-1,d7
+.pal_loop:	move.l	(a0)+,(a1)+
+		dbra	d7,.pal_loop
 
 		addq.w	#2,pal_counter
 		cmp.w	#16,pal_counter
@@ -198,7 +233,10 @@ my_vbl:		movem.l	d0-a4,-(sp)
 
 		move.l	#224*4,pal_offset
 
-.done:		movem.l	(sp)+,d0-a4
+.done:		lea	plasma_buffer,a5
+		lea	$ffff9800.w,a6
+
+		movem.l	(sp)+,d0-a4
 		rte
 
 ; a5: plasma_buffer
@@ -209,6 +247,10 @@ my_timerb:	move.l	(a5)+,(a6)+
 ;		bne.b	.wait				; no, we are still on the right one
 
 		move.l	(a5)+,$ffff8206.w
+
+		clr.b	$fffffa1b.w
+		move.b	#1,$fffffa21.w			; Timer B Data
+		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
@@ -250,7 +292,7 @@ restore_cache:	move.l	save_cacr,d0
 
 set_res:	bsr	wait_vbl
 
-		lea	res256+122,a0
+		lea	res320+122,a0
 		move.l	(a0)+,$ffff8282.w
 		move.l	(a0)+,$ffff8286.w
 		move.l	(a0)+,$ffff828a.w
@@ -382,6 +424,7 @@ res256:		incbin	"scp\16\256240r4.scp"
 res320:		incbin	"scp\16\320240r4.scp"
 pal:		incbin	"atari800.pal"
 tubes:		incbin	"tubes.bin"
+logo:		incbin	"rzog.pix"
 
 pal_counter:	dc.w	1
 pal_offset:	dc.l	224*4
@@ -404,11 +447,32 @@ old_fa07:	ds.b	1
 old_fa13:	ds.b	1
 
 video_ram:	ds.l	1
+plasma_video_ram:
+		ds.l	1
 
 save_pal:	ds.l	256+16/2			; old colours (falcon+st/e)
 save_video:	ds.b	32+12+2				; videl save
 save_cacr:	ds.l	1				; old cache settings
 
 falcon_pal:	ds.l	224*3
+logo_pal:	ds.l	16
 
 plasma_buffer:	ds.b	(4+4)*SCREEN_HEIGHT
+
+plasma_256_8284:ds.w	1
+plasma_256_8286:ds.w	1
+plasma_256_8288:ds.w	1
+plasma_256_828a:ds.w	1
+plasma_256_8210:ds.w	1
+
+plasma_320_8284:ds.w	1
+plasma_320_8286:ds.w	1
+plasma_320_8288:ds.w	1
+plasma_320_828a:ds.w	1
+plasma_320_8210:ds.w	1
+
+plasma_64_8284:	ds.w	1
+plasma_64_8286:	ds.w	1
+plasma_64_8288:	ds.w	1
+plasma_64_828a:	ds.w	1
+plasma_64_8210:	ds.w	1
