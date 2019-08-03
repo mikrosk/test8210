@@ -195,7 +195,7 @@ begin:		movea.l	4(sp),a5			; address to basepage
 
 my_vbl:		movem.l	d0-a4,-(sp)
 
-		move.l	#my_timer_b1,$120.w
+		move.l	#my_timer_b0,$120.w
 
 		clr.b	$fffffa1b.w
 		move.b	#LOGO_HEIGHT,$fffffa21.w	; Timer B Data
@@ -252,6 +252,31 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		rte
 
 ; after last logo raster line
+my_timer_b0:	clr.l	$ffff9800.w
+
+		move.l	plasma_64_8284,$ffff8284.w	; $8284 & 8286
+		move.l	plasma_64_8288,$ffff8288.w	; $8288 & 828a
+		;move.w	plasma_64_8210,$ffff8210.w	; $8210
+
+;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+;		bne.b	.wait				; no, we are still on the right one
+
+		move.b	fuck+1(pc),$ffff8205.w
+		move.b	fuck+2(pc),$ffff8207.w
+		move.b	fuck+3(pc),$ffff8209.w
+
+		lea	plasma_buffer,a5
+		lea	$ffff9800.w,a6
+
+		move.l	#my_timer_b1,$120
+
+		clr.b	$fffffa1b.w
+		move.b	#1,$fffffa21.w			; Timer B Data
+		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
 my_timer_b1:	move.l	(a5)+,(a6)+
 
 		move.l	(a5)+,$120.w
@@ -265,10 +290,6 @@ my_timer_b1:	move.l	(a5)+,(a6)+
 
 		move.b	plasma_video_ram+1,$ffff8205.w
 		move.l	(a5)+,$ffff8206.w
-
-		clr.b	$fffffa1b.w
-		move.b	#1,$fffffa21.w			; Timer B Data
-		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
