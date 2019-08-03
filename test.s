@@ -249,7 +249,7 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		rte
 
 ; after last logo raster line
-my_timer_b0:	;clr.l	$ffff9800.w
+my_timer_b0:	clr.l	$ffff9800.w
 
 		move.l	plasma_64_8284,$ffff8284.w	; $8284 & 8286
 		move.l	plasma_64_8288,$ffff8288.w	; $8288 & 828a
@@ -275,7 +275,7 @@ my_timer_b0:	;clr.l	$ffff9800.w
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-my_timer_b01:	not.l	$ffff9800.w
+my_timer_b01:
 		REPT	7
 		move.l	(a5)+,(a6)+
 		ENDR
@@ -285,7 +285,7 @@ my_timer_b01:	not.l	$ffff9800.w
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-my_timer_b02:	not.l	$ffff9800.w
+my_timer_b02:
 		REPT	8
 		move.l	(a5)+,(a6)+
 		ENDR
@@ -295,9 +295,7 @@ my_timer_b02:	not.l	$ffff9800.w
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-my_timer_b03:	not.l	$ffff9800.w
-
-		move.l	#my_timer_b1,$120.w
+my_timer_b03:	move.l	#my_timer_b1,$120.w
 
 		lea	plasma_buffer,a5
 		lea	$ffff9800.w,a6
@@ -375,6 +373,12 @@ my_timer_b5:
 		move.l	(a5)+,(a6)+
 		ENDR
 
+		move.l	#my_timer_b66,$120
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b66:
 		move.l	#my_timer_b6,$120
 
 		lea	logo_pal,a5
