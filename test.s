@@ -84,6 +84,8 @@ begin:		movea.l	4(sp),a5			; address to basepage
 		move.w	#16,d7
 		bsr	convert_pal
 
+		not.l	logo_pal+0*4			; "patch" background
+
 		lea	res256+122+2,a0
 		lea	res320+122+2,a1
 		lea	res064+122+2,a2
@@ -202,16 +204,33 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		lea	falcon_pal,a1
 		add.l	pal_offset,a1
 		lea	plasma_buffer,a4
-		move.w	#SCREEN_HEIGHT-1,d7
+		move.w	#PLASMA_HEIGHT-1,d7
 
-.loop:		move.l	(a1)+,(a4)+
 		move.l	plasma_video_ram,d0		; d0.l: $00hhmmll
 		lsl.l	#8,d0				; d0.l: $hhmmll00
 		lsr.b	#8,d0				; d0.l: $hhmm00ll
 		and.l	#$00ff00ff,d0			; d0.l: $00mm00ll
+
+.loop:		move.l	(a1)+,(a4)+
+		move.l	#my_timer_b2,(a4)+
 		move.l	d0,(a4)+
 
 		dbra	d7,.loop
+
+		; timer_b1 is triggered after the last logo raster line (sets timer_b2)
+		; PLASMA_HEIGHT-1 x timer_b2
+		; timer_b3 is triggered after the last plasma raster line (sets $8205 and timer_b4)
+		; timer_b4 disables timer b
+
+		move.l	#my_timer_b3,(-8,a4)		; replace last timer_b2
+
+		clr.l	(a4)+				; black background colour
+		move.l	#my_timer_b4,(a4)+
+		move.l	video_ram,d0			; d0.l: $00hhmmll
+		lsl.l	#8,d0				; d0.l: $hhmmll00
+		lsr.b	#8,d0				; d0.l: $hhmm00ll
+		and.l	#$00ff00ff,d0			; d0.l: $00mm00ll
+		move.l	d0,(a4)+
 
 .offsets_done:	move.b	video_ram+1,$ffff8201.w
 		move.b	video_ram+2,$ffff8203.w
@@ -240,13 +259,19 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		movem.l	(sp)+,d0-a4
 		rte
 
-my_timer_b1:	move.b	plasma_video_ram+1,$ffff8205.w
+my_timer_b1:	move.l	(a5)+,(a6)+
+
+		move.l	(a5)+,$120.w
+
+;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+;		bne.b	.wait				; no, we are still on the right one
+
+		move.b	plasma_video_ram+1,$ffff8205.w
+		move.l	(a5)+,$ffff8206.w
 
 		clr.b	$fffffa1b.w
 		move.b	#1,$fffffa21.w			; Timer B Data
 		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
-
-		move.l	#my_timer_b2,$120.w
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
@@ -255,10 +280,31 @@ my_timer_b1:	move.b	plasma_video_ram+1,$ffff8205.w
 ; a6: $ffff9800
 my_timer_b2:	move.l	(a5)+,(a6)+
 
+		move.l	(a5)+,$120.w
+
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
 
 		move.l	(a5)+,$ffff8206.w
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+; after last plasma raster line
+my_timer_b3:	move.l	(a5)+,(a6)+
+
+		move.l	(a5)+,$120.w
+
+;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+;		bne.b	.wait				; no, we are still on the right one
+
+		move.b	video_ram+1,$ffff8205.w
+		move.l	(a5)+,$ffff8206.w
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b4:	clr.b	$fffffa1b.w
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
@@ -465,7 +511,7 @@ save_cacr:	ds.l	1				; old cache settings
 falcon_pal:	ds.l	224*3
 logo_pal:	ds.l	16
 
-plasma_buffer:	ds.b	(4+4)*SCREEN_HEIGHT
+plasma_buffer:	ds.b	(4+4+4)*(PLASMA_HEIGHT+1)
 
 plasma_256_8284:ds.w	1
 plasma_256_8286:ds.w	1
