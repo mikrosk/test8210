@@ -62,9 +62,17 @@ begin:		movea.l	4(sp),a5			; address to basepage
 		move.l	video_ram,a1
 		add.l	#64*1024,a1
 		move.l	a1,plasma_video_ram
-		move.w	#SCREENS*SCREEN_WIDTH*SCREEN_DEPTH/8/4-1,d7
+		move.w	#SCREENS*320*SCREEN_DEPTH/8/4-1,d7
 .tube_loop:	move.l	(a0)+,(a1)+
 		dbra	d7,.tube_loop
+
+;		move.w	#SCREEN_WIDTH*SCREEN_DEPTH/8/4-1,d7
+;.tube_clr_loop:	clr.l	(a1)+
+;		dbra	d7,.tube_clr_loop
+		lea	tubes,a0
+		move.w	#SCREENS*320*SCREEN_DEPTH/8/4-1,d7
+.tube_loop2:	move.l	(a0)+,(a1)+
+		dbra	d7,.tube_loop2
 
 		lea	pal+16*3,a0
 		lea	falcon_pal,a1
@@ -252,8 +260,8 @@ my_vbl:		movem.l	d0-a4,-(sp)
 
 		move.w	#1,pal_counter
 
-		sub.l	#16*4,pal_offset
-		bne.b	.done
+		;sub.l	#16*4,pal_offset
+		;bne.b	.done
 
 		move.l	#224*4,pal_offset
 
@@ -272,8 +280,8 @@ my_timer_b1:	move.l	(a5)+,(a6)+
 		move.l	plasma_256_8288,$ffff8288.w	; $8288 & 828a
 		;move.w	plasma_256_8210,$ffff8210.w	; $8210
 
-;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
-;		bne.b	.wait				; no, we are still on the right one
+.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+		bne.b	.wait				; no, we are still on the right one
 
 		move.b	plasma_video_ram+1,$ffff8205.w
 		move.l	(a5)+,$ffff8206.w
@@ -287,13 +295,14 @@ my_timer_b1:	move.l	(a5)+,(a6)+
 
 ; a5: plasma_buffer
 ; a6: $ffff9800
-my_timer_b2:	move.l	(a5)+,(a6)+
+my_timer_b2:	;move.l	(a5)+,(a6)+
 
-		move.l	(a5)+,$120.w
+		;move.l	(a5)+,$120.w
 
-;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
-;		bne.b	.wait				; no, we are still on the right one
+.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+		beq.b	.wait				; no, we are still on the right one
 
+		addq.l	#8,a5
 		move.l	(a5)+,$ffff8206.w
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
@@ -308,8 +317,8 @@ my_timer_b3:	move.l	(a5)+,(a6)+
 		move.l	plasma_320_8288,$ffff8288.w	; $8288 & 828a
 		;move.w	plasma_320_8210,$ffff8210.w	; $8210
 
-;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
-;		bne.b	.wait				; no, we are still on the right one
+.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+		bne.b	.wait				; no, we are still on the right one
 
 		move.b	video_ram+1,$ffff8205.w
 		move.l	(a5)+,$ffff8206.w
@@ -486,9 +495,9 @@ wait_vbl:	move.w	#$25,-(sp)			; Vsync()
 ; ------------------------------------------------------
 
 		EVEN
-res064:		incbin	"scp\16\064240r4.scp"
-res256:		incbin	"scp\16\256240r4.scp"
-res320:		incbin	"scp\16\320240r4.scp"
+res064:		incbin	"scp\16\064240v4.scp"
+res256:		incbin	"scp\16\256240v4.scp"
+res320:		incbin	"scp\16\320240v4.scp"
 pal:		incbin	"atari800.pal"
 tubes:		incbin	"tubes.bin"
 logo:		incbin	"rzog.pix"
