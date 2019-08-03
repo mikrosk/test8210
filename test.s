@@ -224,19 +224,7 @@ my_vbl:		movem.l	d0-a4,-(sp)
 
 		move.l	#my_timer_b3,(-8,a4)		; replace last timer_b2
 
-		clr.l	(a4)+				; black background colour
-		move.l	#my_timer_b4,(a4)+
-		move.l	video_ram,d0			; d0.l: $00hhmmll
-		lsl.l	#8,d0				; d0.l: $hhmmll00
-		lsr.b	#8,d0				; d0.l: $hhmm00ll
-		and.l	#$00ff00ff,d0			; d0.l: $00mm00ll
-		move.l	d0,(a4)+
-
-.offsets_done:	move.l	plasma_320_8284,$ffff8284.w	; $8284 & 8286
-		move.l	plasma_320_8288,$ffff8288.w	; $8288 & 828a
-		;move.w	plasma_320_8210,$ffff8210.w	; $8210
-
-		move.b	video_ram+1,$ffff8201.w
+.offsets_done:	move.b	video_ram+1,$ffff8201.w
 		move.b	video_ram+2,$ffff8203.w
 		move.b	video_ram+3,$ffff820d.w
 
@@ -252,8 +240,8 @@ my_vbl:		movem.l	d0-a4,-(sp)
 
 		move.w	#1,pal_counter
 
-		sub.l	#16*4,pal_offset
-		bne.b	.done
+		;sub.l	#16*4,pal_offset
+		;bne.b	.done
 
 		move.l	#224*4,pal_offset
 
@@ -300,9 +288,53 @@ my_timer_b2:	move.l	(a5)+,(a6)+
 		rte
 
 ; after last plasma raster line
-my_timer_b3:	move.l	(a5)+,(a6)+
+my_timer_b3:	clr.l	$ffff9800.w
 
-		move.l	(a5)+,$120.w
+		move.l	plasma_64_8284,$ffff8284.w	; $8284 & 8286
+		move.l	plasma_64_8288,$ffff8288.w	; $8288 & 828a
+		;move.w	plasma_64_8210,$ffff8210.w	; $8210
+
+;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+;		bne.b	.wait				; no, we are still on the right one
+
+		move.b	fuck+1(pc),$ffff8205.w
+		move.b	fuck+2(pc),$ffff8207.w
+		move.b	fuck+3(pc),$ffff8209.w
+
+		lea	logo_pal+4,a5			; skip background colour for now
+		lea	$ffff9804.w,a6			;
+
+		move.l	#my_timer_b4,$120
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+fuck:		dc.l	empty_space
+
+my_timer_b4:
+		REPT	7
+		move.l	(a5)+,(a6)+
+		ENDR
+
+		move.l	#my_timer_b5,$120
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b5:
+		REPT	8
+		move.l	(a5)+,(a6)+
+		ENDR
+
+		move.l	#my_timer_b6,$120
+
+		lea	logo_pal,a5
+		lea	$ffff9800.w,a6
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b6:	move.l	(a5),(a6)
 
 		move.l	plasma_320_8284,$ffff8284.w	; $8284 & 8286
 		move.l	plasma_320_8288,$ffff8288.w	; $8288 & 828a
@@ -312,12 +344,15 @@ my_timer_b3:	move.l	(a5)+,(a6)+
 ;		bne.b	.wait				; no, we are still on the right one
 
 		move.b	video_ram+1,$ffff8205.w
-		move.l	(a5)+,$ffff8206.w
+		move.b	video_ram+2,$ffff8207.w
+		move.b	video_ram+3,$ffff8209.w
+
+		move.l	#my_timer_b7,$120
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-my_timer_b4:	clr.b	$fffffa1b.w
+my_timer_b7:	clr.b	$fffffa1b.w
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
@@ -543,3 +578,5 @@ plasma_64_8286:	ds.w	1
 plasma_64_8288:	ds.w	1
 plasma_64_828a:	ds.w	1
 plasma_64_8210:	ds.w	1
+
+empty_space:	ds.b	64*1024
