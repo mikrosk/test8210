@@ -38,7 +38,7 @@ begin:		movea.l	4(sp),a5			; address to basepage
 		lea	12(sp),sp			;
 
 		move.w	#0,-(sp)			; mxalloc()
-		move.l	#SCREENS*SCREEN_WIDTH*SCREEN_HEIGHT*SCREEN_DEPTH/8+65535,-(sp)
+		move.l	#SCREENS*SCREEN_WIDTH*SCREEN_HEIGHT*SCREEN_DEPTH/8+2*65535,-(sp)
 		move.w	#$44,-(sp)			;
 		trap	#1				;
 		addq.l	#8,sp				;
@@ -56,7 +56,7 @@ begin:		movea.l	4(sp),a5			; address to basepage
 		move.l	video_ram,a1
 		move.w	#LOGO_WIDTH*LOGO_HEIGHT*SCREEN_DEPTH/8/4-1,d7
 .logo_loop:	move.l	(a0)+,(a1)+
-		dbra	d7,.tube_loop
+		dbra	d7,.logo_loop
 
 		lea	tubes,a0
 		move.l	video_ram,a1
@@ -121,7 +121,6 @@ begin:		movea.l	4(sp),a5			; address to basepage
 		move.l	#my_vbl,$70.w
 
 		move.l	$120.w,old_timerb
-		move.l	#my_timerb,$120.w
 
 		move.b	$fffffa1b.w,old_tbcr
 		move.b	$fffffa21.w,old_tbdr
@@ -194,6 +193,8 @@ begin:		movea.l	4(sp),a5			; address to basepage
 
 my_vbl:		movem.l	d0-a4,-(sp)
 
+		move.l	#my_timer_b1,$120.w
+
 		clr.b	$fffffa1b.w
 		move.b	#LOGO_HEIGHT,$fffffa21.w	; Timer B Data
 		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
@@ -201,7 +202,7 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		lea	falcon_pal,a1
 		add.l	pal_offset,a1
 		lea	plasma_buffer,a4
-		move.w	#PLASMA_HEIGHT-1,d7
+		move.w	#SCREEN_HEIGHT-1,d7
 
 .loop:		move.l	(a1)+,(a4)+
 		move.l	plasma_video_ram,d0		; d0.l: $00hhmmll
@@ -239,18 +240,25 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		movem.l	(sp)+,d0-a4
 		rte
 
+my_timer_b1:	move.b	plasma_video_ram+1,$ffff8205.w
+
+		clr.b	$fffffa1b.w
+		move.b	#1,$fffffa21.w			; Timer B Data
+		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
+
+		move.l	#my_timer_b2,$120.w
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
 ; a5: plasma_buffer
 ; a6: $ffff9800
-my_timerb:	move.l	(a5)+,(a6)+
+my_timer_b2:	move.l	(a5)+,(a6)+
 
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
 
 		move.l	(a5)+,$ffff8206.w
-
-		clr.b	$fffffa1b.w
-		move.b	#1,$fffffa21.w			; Timer B Data
-		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
