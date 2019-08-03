@@ -2,10 +2,10 @@
 		COMMENT	HEAD=%100111			; Super,MallocInTT-RAM,LoadInTT-RAM,Fastload
 		;OPT	D-
 
-SCREEN_WIDTH	EQU	256
+SCREEN_WIDTH	EQU	320
 SCREEN_HEIGHT	EQU	240
 SCREEN_DEPTH	EQU	4
-SCREENS		EQU	2
+SCREENS		EQU	1
 
 TBCR_VALUE	EQU	%1000				; event mode
 TBDR_VALUE	EQU	1				; every TBDR_VALUE raster lines
@@ -67,26 +67,6 @@ begin:		movea.l	4(sp),a5			; address to basepage
 		lea	falcon_pal+224*2*4,a1
 		move.w	#224,d7
 		bsr	convert_pal
-
-		lea	video_ml,a1
-		lea	video_scroll,a2
-		move.l	video_ram,d0			; d0.l: $00hhmmll
-		move.w	#SCREEN_OFFSETS/16-1,d7
-
-.offset_loop:	move.l	d0,d4				; d4.l: $00hhmmll
-		lsl.l	#8,d4				; d4.l: $hhmmll00
-		rol.w	#8,d4				; d4.l: $hhmm00ll
-
-		clr.b	d5				; d5.b: scroll counter
-		move.w	#16-1,d6
-
-.scroll_loop:	move.l	d4,(a1)+
-		move.b	d5,(a2)+
-		addq.b	#1,d5
-		dbra	d6,.scroll_loop
-
-		addq.l	#4*2,d0				; add 16 pixels (4 words)
-		dbra	d7,.offset_loop
 
 		clr.l	-(sp)				; Super()
 		move.w	#$20,-(sp)			;
@@ -183,52 +163,29 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		move.b	#TBDR_VALUE,$fffffa21.w		; Timer B Data
 		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
 
-		lea	sin_tab+SIN_ENTRIES*2/2,a0
 		lea	falcon_pal,a1
 		add.l	pal_offset,a1
-		lea	video_ml+SCREEN_OFFSETS*4/2,a2
-		lea	video_scroll+SCREEN_OFFSETS*1/2,a3
 		lea	plasma_buffer,a4
 		move.w	#SCREEN_HEIGHT-1,d7
 
-		move.b	plasma_X2,d1
-		move.b	plasma_X1adc,d3
-		move.b	plasma_X2adc,d4
+.loop:		move.l	(a1)+,(a4)+
+		move.l	video_ram,d0			; d0.l: $00hhmmll
+		lsl.l	#8,d0				; d0.l: $hhmmll00
+		lsr.b	#8,d0				; d0.l: $hhmm00ll
+		and.l	#$00ff00ff,d0			; d0.l: $00mm00ll
+		move.l	d0,(a4)+
 
-		add.b	d3,plasma_adc1
-		move.b	plasma_adc1,d3
-		add.b	d4,plasma_adc2
-		move.b	plasma_adc2,d4
-
-.offset_loop:	add.b	plasma_X1,d3
-		ext.w	d3
-		move.w	(a0,d3.w*2),d5
-
-		add.b	d1,d4
-		ext.w	d4
-		move.w	(a0,d4.w*2),d2
-
-		add.b	d2,d5
-		ext.w	d5
-
-		move.l	(a1)+,(a4)+
-		move.l	(a2,d5.w*4),(a4)+
-		move.b	(a3,d5.w*1),(a4)+
-
-		dbra	d7,.offset_loop
+		dbra	d7,.loop
 
 .offsets_done:	lea	plasma_buffer,a5
 		lea	$ffff9800.w,a6
 		move.l	(a5)+,(a6)+			; $rrgg00bb
-		; $00xx0000 + 256*240*4/2 = $00xx7800
 		move.b	video_ram+1,$ffff8201.w
 		move.l	(a5)+,d0			; d0.l: $00mm00ll
 		swap	d0
 		move.b	d0,$ffff8203.w
 		swap	d0
 		move.b	d0,$ffff820d.w
-		move.b	(a5)+,$ffff8265.w		; $oo (0 ~ 15)
-		move.w	#(SCREEN_WIDTH/16)*4,$ffff820e.w ; (hz res/16) * #bitplanes
 
 		addq.w	#2,pal_counter
 		cmp.w	#16,pal_counter
@@ -248,11 +205,10 @@ my_vbl:		movem.l	d0-a4,-(sp)
 ; a6: $ffff9800
 my_timerb:	move.l	(a5)+,(a6)+
 
-.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
-		bne.b	.wait				; no, we are still on the right one
+;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+;		bne.b	.wait				; no, we are still on the right one
 
 		move.l	(a5)+,$ffff8206.w
-		move.b	(a5)+,$ffff8265.w
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
@@ -277,10 +233,10 @@ save_cache:	movec	cacr,d0
 		rts
 
 set_cache:	movec	cacr,d0
-		bset	#0,d0				; i cache on
-		;bclr	#0,d0
-		bset	#4,d0				; i burst on
-		;bclr	#4,d0
+		;bset	#0,d0				; i cache on
+		bclr	#0,d0
+		;bset	#4,d0				; i burst on
+		bclr	#4,d0
 		bclr	#8,d0				; d cache off
 		bclr	#12,d0				; d burst off
 		movec	d0,cacr
@@ -294,7 +250,7 @@ restore_cache:	move.l	save_cacr,d0
 
 set_res:	bsr	wait_vbl
 
-		lea	res+122,a0
+		lea	res256+122,a0
 		move.l	(a0)+,$ffff8282.w
 		move.l	(a0)+,$ffff8286.w
 		move.l	(a0)+,$ffff828a.w
@@ -421,23 +377,14 @@ wait_vbl:	move.w	#$25,-(sp)			; Vsync()
 ; ------------------------------------------------------
 
 		EVEN
-res:		incbin	"scp\16\256240v4.scp"
+res064:		incbin	"scp\16\064240r4.scp"
+res256:		incbin	"scp\16\256240r4.scp"
+res320:		incbin	"scp\16\320240r4.scp"
 pal:		incbin	"atari800.pal"
 tubes:		incbin	"tubes.bin"
 
 pal_counter:	dc.w	1
 pal_offset:	dc.l	224*4
-
-		incbin	"sin_tab.bin"
-sin_tab:	incbin	"sin_tab.bin"
-		incbin	"sin_tab.bin"
-
-plasma_X1	dc.b	5;	$7e	;8
-plasma_X2	dc.b	-4;	1	;-9
-plasma_X1adc	dc.b	1;	0	;1
-plasma_X2adc	dc.b	1;	5	;1
-plasma_adc1	dc.b	0
-plasma_adc2	dc.b	0
 
 ; ------------------------------------------------------
 		SECTION	BSS
@@ -464,7 +411,4 @@ save_cacr:	ds.l	1				; old cache settings
 
 falcon_pal:	ds.l	224*3
 
-video_ml:	ds.l	SCREEN_OFFSETS			; $00mm00ll
-video_scroll:	ds.b	SCREEN_OFFSETS			; $oo
-
-plasma_buffer:	ds.b	(4+4+1)*SCREEN_HEIGHT
+plasma_buffer:	ds.b	(4+4)*SCREEN_HEIGHT
