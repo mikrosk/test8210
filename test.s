@@ -251,9 +251,6 @@ my_vbl:		movem.l	d0-a4,-(sp)
 ; after last logo raster line
 my_timer_b0:	clr.l	$ffff9800.w
 
-		move.l	plasma_64_8284,$ffff8284.w	; $8284 & 8286
-		move.l	plasma_64_8288,$ffff8288.w	; $8288 & 828a
-		;move.w	plasma_64_8210,$ffff8210.w	; $8210
 
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
@@ -261,6 +258,10 @@ my_timer_b0:	clr.l	$ffff9800.w
 		move.b	fuck+1(pc),$ffff8205.w
 		move.b	fuck+2(pc),$ffff8207.w
 		move.b	fuck+3(pc),$ffff8209.w
+		move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
+		move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
+		;move.w	plasma_256_8210(pc),$ffff8210.w	; $8210
+
 
 		lea	falcon_pal+4,a5
 		add.l	pal_offset,a5
@@ -307,15 +308,16 @@ my_timer_b1:	move.l	(a5)+,(a6)+
 
 		move.l	(a5)+,$120.w
 
-		move.l	plasma_256_8284,$ffff8284.w	; $8284 & 8286
-		move.l	plasma_256_8288,$ffff8288.w	; $8288 & 828a
-		move.w	plasma_256_8210,$ffff8210.w	; $8210
+
 
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
 
-		move.b	plasma_video_ram+1,$ffff8205.w
+		move.b	plasma_video_ram+1(pc),$ffff8205.w
 		move.l	(a5)+,$ffff8206.w
+		move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
+		move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
+		;move.w	plasma_256_8210(pc),$ffff8210.w	; $8210
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
@@ -337,9 +339,7 @@ my_timer_b2:	move.l	(a5)+,(a6)+
 ; after last plasma raster line
 my_timer_b3:	clr.l	$ffff9800.w
 
-		move.l	plasma_64_8284,$ffff8284.w	; $8284 & 8286
-		move.l	plasma_64_8288,$ffff8288.w	; $8288 & 828a
-		;move.w	plasma_64_8210,$ffff8210.w	; $8210
+
 
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
@@ -347,6 +347,9 @@ my_timer_b3:	clr.l	$ffff9800.w
 		move.b	fuck+1(pc),$ffff8205.w
 		move.b	fuck+2(pc),$ffff8207.w
 		move.b	fuck+3(pc),$ffff8209.w
+		move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
+		move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
+		;move.w	plasma_256_8210(pc),$ffff8210.w	; $8210
 
 		lea	logo_pal+4,a5			; skip background colour for now
 		lea	$ffff9804.w,a6			;
@@ -389,16 +392,17 @@ my_timer_b66:
 
 my_timer_b6:	move.l	(a5),(a6)
 
-		move.l	plasma_320_8284,$ffff8284.w	; $8284 & 8286
-		move.l	plasma_320_8288,$ffff8288.w	; $8288 & 828a
-		move.w	plasma_320_8210,$ffff8210.w	; $8210
+
 
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
 
-		move.b	video_ram+1,$ffff8205.w
-		move.b	video_ram+2,$ffff8207.w
-		move.b	video_ram+3,$ffff8209.w
+		move.b	video_ram+1(pc),$ffff8205.w
+		move.b	video_ram+2(pc),$ffff8207.w
+		move.b	video_ram+3(pc),$ffff8209.w
+		move.l	plasma_320_8284(pc),$ffff8284.w	; $8284 & 8286
+		move.l	plasma_320_8288(pc),$ffff8288.w	; $8288 & 828a
+		;move.w	plasma_320_8210(pc),$ffff8210.w	; $8210
 
 		move.l	#my_timer_b7,$120
 
@@ -430,10 +434,10 @@ save_cache:	movec	cacr,d0
 		rts
 
 set_cache:	movec	cacr,d0
-		;bset	#0,d0				; i cache on
-		bclr	#0,d0
-		;bset	#4,d0				; i burst on
-		bclr	#4,d0
+		bset	#0,d0				; i cache on
+		;bclr	#0,d0
+		bset	#4,d0				; i burst on
+		;bclr	#4,d0
 		bclr	#8,d0				; d cache off
 		bclr	#12,d0				; d burst off
 		movec	d0,cacr
@@ -574,9 +578,9 @@ wait_vbl:	move.w	#$25,-(sp)			; Vsync()
 ; ------------------------------------------------------
 
 		EVEN
-res064:		incbin	"scp\16\064240r4.scp"
-res256:		incbin	"scp\16\256240r4.scp"
-res320:		incbin	"scp\16\320240r4.scp"
+res064:		incbin	"scp\16\064240v4.scp"
+res256:		incbin	"scp\16\256240v4.scp"
+res320:		incbin	"scp\16\320240v4.scp"
 pal:		incbin	"atari800.pal"
 tubes:		incbin	"tubes.bin"
 logo:		incbin	"rzog.pix"
