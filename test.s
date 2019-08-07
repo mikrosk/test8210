@@ -66,6 +66,11 @@ begin:		movea.l	4(sp),a5			; address to basepage
 .tube_loop:	move.l	(a0)+,(a1)+
 		dbra	d7,.tube_loop
 
+		lea	tubes,a0
+		move.w	#SCREENS*SCREEN_WIDTH*SCREEN_DEPTH/8/4-1,d7
+.tube_loop1:	move.l	(a0)+,(a1)+
+		dbra	d7,.tube_loop1
+
 		lea	pal+16*3,a0
 		lea	falcon_pal,a1
 		move.w	#224,d7
@@ -255,9 +260,9 @@ my_timer_b0:	clr.l	$ffff9800.w
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
 
-		move.b	fuck+1(pc),$ffff8205.w
-		move.b	fuck+2(pc),$ffff8207.w
-		move.b	fuck+3(pc),$ffff8209.w
+		;move.b	fuck+1(pc),$ffff8205.w
+		;move.b	fuck+2(pc),$ffff8207.w
+		;move.b	fuck+3(pc),$ffff8209.w
 		move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
 		move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
 		;move.w	plasma_256_8210(pc),$ffff8210.w	; $8210
@@ -315,8 +320,8 @@ my_timer_b1:	move.l	(a5)+,(a6)+
 
 		move.b	plasma_video_ram+1(pc),$ffff8205.w
 		move.l	(a5)+,$ffff8206.w
-		move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
-		move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
+		;move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
+		;move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
 		;move.w	plasma_256_8210(pc),$ffff8210.w	; $8210
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
@@ -344,11 +349,11 @@ my_timer_b3:	clr.l	$ffff9800.w
 ;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 ;		bne.b	.wait				; no, we are still on the right one
 
-		move.b	fuck+1(pc),$ffff8205.w
-		move.b	fuck+2(pc),$ffff8207.w
-		move.b	fuck+3(pc),$ffff8209.w
-		move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
-		move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
+		;move.b	fuck+1(pc),$ffff8205.w
+		;move.b	fuck+2(pc),$ffff8207.w
+		;move.b	fuck+3(pc),$ffff8209.w
+		;move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
+		;move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
 		;move.w	plasma_256_8210(pc),$ffff8210.w	; $8210
 
 		lea	logo_pal+4,a5			; skip background colour for now
