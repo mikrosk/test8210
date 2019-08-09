@@ -89,7 +89,7 @@ begin:		movea.l	4(sp),a5			; address to basepage
 		move.w	#16,d7
 		bsr	convert_pal
 
-		not.l	logo_pal+0*4			; "patch" background
+		;not.l	logo_pal+0*4			; "patch" background
 
 		lea	res256+122+2,a0
 		lea	res320+122+2,a1
@@ -109,6 +109,56 @@ begin:		movea.l	4(sp),a5			; address to basepage
 		move.w	(24,a0),plasma_256_8210
 		move.w	(24,a1),plasma_320_8210
 		move.w	(24,a2),plasma_64_8210
+
+		lea	logo_pal+1*4,a0			; skip background
+		lea	plasma_pal_buffer_top,a1
+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	#plasma_timer_b2,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	#plasma_timer_b2,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	#plasma_timer_b2,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	#plasma_timer_b3,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	#plasma_timer_b4,(a1)+
+
+		lea	logo_pal,a0
+		lea	plasma_pal_buffer_bottom,a1
+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	#plasma_timer_b7,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	#plasma_timer_b7,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	#plasma_timer_b7,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	#plasma_timer_b7,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	#plasma_timer_b8,(a1)+
+		move.l	(a0)+,(a1)+
+		; the rest doesn't matter
 
 		clr.l	-(sp)				; Super()
 		move.w	#$20,-(sp)			;
@@ -200,11 +250,15 @@ begin:		movea.l	4(sp),a5			; address to basepage
 
 my_vbl:		movem.l	d0-a4,-(sp)
 
-		move.l	#my_timer_b0,$120.w
+		move.l	#plasma_timer_b1,$120.w
 
 		clr.b	$fffffa1b.w
 		move.b	#LOGO_HEIGHT,$fffffa21.w	; Timer B Data
 		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
+
+		move.b	video_ram+1,$ffff8201.w
+		move.b	video_ram+2,$ffff8203.w
+		move.b	video_ram+3,$ffff820d.w
 
 		lea	falcon_pal,a1
 		add.l	pal_offset,a1
@@ -217,29 +271,15 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		and.l	#$00ff00ff,d0			; d0.l: $00mm00ll
 
 .loop:		move.l	(a1)+,(a4)+
-		move.l	#my_timer_b2,(a4)+
+		move.l	#plasma_timer_b5,(a4)+
 		move.l	d0,(a4)+
 
 		dbra	d7,.loop
 
-		; timer_b1 is triggered after the last logo raster line (sets timer_b2)
-		; PLASMA_HEIGHT-1 x timer_b2
-		; timer_b3 is triggered after the last plasma raster line (sets $8205 and timer_b4)
-		; timer_b4 disables timer b
+		move.l	#plasma_timer_b6,(-8-12,a4)
+		move.l	#plasma_timer_b7,(-8,a4)
 
-		move.l	#my_timer_b3,(-8,a4)		; replace last timer_b2
-
-.offsets_done:	move.b	video_ram+1,$ffff8201.w
-		move.b	video_ram+2,$ffff8203.w
-		move.b	video_ram+3,$ffff820d.w
-
-		lea	logo_pal,a0
-		lea	$ffff9800.w,a1
-		moveq	#16-1,d7
-.pal_loop:	move.l	(a0)+,(a1)+
-		dbra	d7,.pal_loop
-
-		addq.w	#2,pal_counter
+.offsets_done:	addq.w	#2,pal_counter
 		cmp.w	#16,pal_counter
 		ble.b	.done
 
@@ -251,139 +291,46 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		move.l	#224*4,pal_offset
 
 .done:		movem.l	(sp)+,d0-a4
-
-		tst.l	0(a5)
-		tst.l	4(a5)
-		tst.l	8(a5)
 		rte
 
 ; after last logo raster line
-my_timer_b0:	clr.l	$ffff9800.w			; TODO: remove
-
+plasma_timer_b1:
 .wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 		bne.b	.wait				; no, we are still on the right one
 
 		move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
 		move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
 
-		lea	falcon_pal+4,a5
-		add.l	pal_offset,a5
+		lea	plasma_pal_buffer_top,a5
 		lea	$ffff9804.w,a6
 
-		move.l	#my_timer_b01,$120.w
+		move.l	#plasma_timer_b2,$120.w
 
 		clr.b	$fffffa1b.w
 		move.b	#1,$fffffa21.w			; Timer B Data
 		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
 
-		tst.l	0(a5)
-		tst.l	4(a5)
-		tst.l	8(a5)
-
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-my_timer_b01:
+; repeat 4x
+plasma_timer_b2:
 		REPT	3
 		move.l	(a5)+,(a6)+
 		ENDR
 
-		tst.l	0(a5)
-		tst.l	4(a5)
-		tst.l	8(a5)
-
-		move.l	#my_timer_b02,$120.w
+		move.l	(a5)+,$120.w
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-my_timer_b02:
+; repeat 1x
+plasma_timer_b3:
 		REPT	3
 		move.l	(a5)+,(a6)+
 		ENDR
 
-		tst.l	0(a5)
-		tst.l	4(a5)
-		tst.l	8(a5)
-
-		move.l	#my_timer_b021,$120.w
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-my_timer_b021:
-		REPT	3
-		move.l	(a5)+,(a6)+
-		ENDR
-
-		tst.l	0(a5)
-		tst.l	4(a5)
-		tst.l	8(a5)
-
-		move.l	#my_timer_b022,$120.w
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-my_timer_b022:
-		REPT	3
-		move.l	(a5)+,(a6)+
-		ENDR
-
-		tst.l	0(a5)
-		tst.l	4(a5)
-		tst.l	8(a5)
-
-		move.l	#my_timer_b023,$120.w
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-my_timer_b023:
-		REPT	3
-		move.l	(a5)+,(a6)+
-		ENDR
-
-		tst.l	0(a5)
-		tst.l	4(a5)
-		tst.l	8(a5)
-
-		move.l	#my_timer_b03,$120.w
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-my_timer_b024:
-		REPT	2
-		move.l	(a5)+,(a6)+
-		ENDR
-
-		move.l	#my_timer_b025,$120.w
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-my_timer_b025:
-		REPT	2
-		move.l	(a5)+,(a6)+
-		ENDR
-
-		move.l	#my_timer_b026,$120.w
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-my_timer_b026:
-		REPT	1
-		move.l	(a5)+,(a6)+
-		ENDR
-
-		move.l	#my_timer_b03,$120.w
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-my_timer_b03:	move.l	#my_timer_b1,$120.w
+		move.l	(a5)+,$120.w
 
 		lea	plasma_buffer,a5
 		lea	$ffff9800.w,a6
@@ -391,27 +338,24 @@ my_timer_b03:	move.l	#my_timer_b1,$120.w
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-my_timer_b1:	move.l	(a5)+,(a6)+
+; repeat 1x
+plasma_timer_b4:
+		move.l	(a5)+,(a6)+
 
 		move.l	(a5)+,$120.w
-
-
 
 .wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 		bne.b	.wait				; no, we are still on the right one
 
 		move.b	plasma_video_ram+1(pc),$ffff8205.w
 		move.l	(a5)+,$ffff8206.w
-		;move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
-		;move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
-		;move.w	plasma_256_8210(pc),$ffff8210.w	; $8210
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-; a5: plasma_buffer
-; a6: $ffff9800
-my_timer_b2:	move.l	(a5)+,(a6)+
+; repeat PLASMA_HEIGHT-2 times
+plasma_timer_b5:
+		move.l	(a5)+,(a6)+
 
 		move.l	(a5)+,$120.w
 
@@ -423,63 +367,37 @@ my_timer_b2:	move.l	(a5)+,(a6)+
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-; after last plasma raster line
-my_timer_b3:	clr.l	$ffff9800.w
+; repeat 1x
+plasma_timer_b6:
+		move.l	(a5)+,(a6)+
 
-
+		move.l	(a5)+,$120.w
 
 .wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 		bne.b	.wait				; no, we are still on the right one
 
-		;move.b	fuck+1(pc),$ffff8205.w
-		;move.b	fuck+2(pc),$ffff8207.w
-		;move.b	fuck+3(pc),$ffff8209.w
-		;move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
-		;move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
-		;move.w	plasma_256_8210(pc),$ffff8210.w	; $8210
+		move.l	(a5)+,$ffff8206.w
 
-		lea	logo_pal+4,a5			; skip background colour for now
-		lea	$ffff9804.w,a6			;
-
-		move.l	#my_timer_b4,$120
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-fuck:		dc.l	empty_space
-
-my_timer_b4:
-		REPT	7
-		move.l	(a5)+,(a6)+
-		ENDR
-
-		move.l	#my_timer_b5,$120
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-my_timer_b5:
-		REPT	8
-		move.l	(a5)+,(a6)+
-		ENDR
-
-		move.l	#my_timer_b66,$120
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-my_timer_b66:
-		move.l	#my_timer_b6,$120
-
-		lea	logo_pal,a5
+		lea	plasma_pal_buffer_bottom,a5
 		lea	$ffff9800.w,a6
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-my_timer_b6:	move.l	(a5),(a6)
+; repeat 5x (after last plasma raster line)
+plasma_timer_b7:
+		REPT	3
+		move.l	(a5)+,(a6)+
+		ENDR
 
+		move.l	(a5)+,$120.w
 
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+; repeat 1x
+plasma_timer_b8:
+		move.l	(a5),(a6)
 
 .wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
 		bne.b	.wait				; no, we are still on the right one
@@ -489,14 +407,8 @@ my_timer_b6:	move.l	(a5),(a6)
 		move.b	video_ram+3(pc),$ffff8209.w
 		move.l	plasma_320_8284(pc),$ffff8284.w	; $8284 & 8286
 		move.l	plasma_320_8288(pc),$ffff8288.w	; $8288 & 828a
-		;move.w	plasma_320_8210(pc),$ffff8210.w	; $8210
 
-		move.l	#my_timer_b7,$120
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-my_timer_b7:	clr.b	$fffffa1b.w
+		clr.b	$fffffa1b.w
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
@@ -724,3 +636,8 @@ plasma_64_828a:	ds.w	1
 plasma_64_8210:	ds.w	1
 
 empty_space:	ds.b	64*1024
+
+plasma_pal_buffer_top:
+		ds.l	5*(3+1)				; 3x palette items, $120
+plasma_pal_buffer_bottom:
+		ds.l	6*(3+1)				; 3x palette items, $120
