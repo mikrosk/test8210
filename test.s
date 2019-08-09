@@ -128,7 +128,7 @@ begin:		movea.l	4(sp),a5			; address to basepage
 		move.l	(a0)+,(a1)+
 		move.l	(a0)+,(a1)+
 		move.l	(a0)+,(a1)+
-		move.l	#plasma_timer_b3,(a1)+
+		move.l	#plasma_timer_b2,(a1)+
 		move.l	(a0)+,(a1)+
 		move.l	(a0)+,(a1)+
 		move.l	(a0)+,(a1)+
@@ -260,9 +260,19 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		move.b	video_ram+2,$ffff8203.w
 		move.b	video_ram+3,$ffff820d.w
 
+		lea	falcon_pal+1*4,a0		; skip background
+		add.l	pal_offset,a0
+		lea	plasma_pal_buffer_top,a4
+		move.w	#5-1,d7
+.plasma_top_loop:
+		move.l	(a0)+,(a4)+
+		move.l	(a0)+,(a4)+
+		move.l	(a0)+,(a4)+
+		addq.l	#4,a4
+		dbra	d7,.plasma_top_loop
+
 		lea	falcon_pal,a1
 		add.l	pal_offset,a1
-		lea	plasma_buffer,a4
 		move.w	#PLASMA_HEIGHT-1,d7
 
 		move.l	plasma_video_ram,d0		; d0.l: $00hhmmll
@@ -310,30 +320,20 @@ plasma_timer_b1:
 		move.b	#1,$fffffa21.w			; Timer B Data
 		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
 
+		tst.l	(a5)
+		tst.l	4(a5)
+		tst.l	8(a5)
+
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-; repeat 4x
+; repeat 5x
 plasma_timer_b2:
 		REPT	3
 		move.l	(a5)+,(a6)+
 		ENDR
 
 		move.l	(a5)+,$120.w
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-; repeat 1x
-plasma_timer_b3:
-		REPT	3
-		move.l	(a5)+,(a6)+
-		ENDR
-
-		move.l	(a5)+,$120.w
-
-		lea	plasma_buffer,a5
-		lea	$ffff9800.w,a6
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
@@ -615,8 +615,6 @@ save_cacr:	ds.l	1				; old cache settings
 falcon_pal:	ds.l	224*3
 logo_pal:	ds.l	16
 
-plasma_buffer:	ds.b	(4+4+4)*(PLASMA_HEIGHT+1)
-
 plasma_256_8284:ds.w	1
 plasma_256_8286:ds.w	1
 plasma_256_8288:ds.w	1
@@ -638,6 +636,6 @@ plasma_64_8210:	ds.w	1
 empty_space:	ds.b	64*1024
 
 plasma_pal_buffer_top:
-		ds.l	5*(3+1)				; 3x palette items, $120
+		ds.l	5*(3+1)+PLASMA_HEIGHT*(1+1+1)	; 3x palette items, $120
 plasma_pal_buffer_bottom:
 		ds.l	6*(3+1)				; 3x palette items, $120
