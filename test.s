@@ -251,22 +251,20 @@ my_vbl:		movem.l	d0-a4,-(sp)
 		move.l	#224*4,pal_offset
 
 .done:		movem.l	(sp)+,d0-a4
+
+		tst.l	0(a5)
+		tst.l	4(a5)
+		tst.l	8(a5)
 		rte
 
 ; after last logo raster line
-my_timer_b0:	clr.l	$ffff9800.w
+my_timer_b0:	clr.l	$ffff9800.w			; TODO: remove
 
+.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+		bne.b	.wait				; no, we are still on the right one
 
-;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
-;		bne.b	.wait				; no, we are still on the right one
-
-		;move.b	fuck+1(pc),$ffff8205.w
-		;move.b	fuck+2(pc),$ffff8207.w
-		;move.b	fuck+3(pc),$ffff8209.w
 		move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
 		move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
-		;move.w	plasma_256_8210(pc),$ffff8210.w	; $8210
-
 
 		lea	falcon_pal+4,a5
 		add.l	pal_offset,a5
@@ -278,13 +276,21 @@ my_timer_b0:	clr.l	$ffff9800.w
 		move.b	#1,$fffffa21.w			; Timer B Data
 		move.b	#TBCR_VALUE,$fffffa1b.w		; Timer B Control
 
+		tst.l	0(a5)
+		tst.l	4(a5)
+		tst.l	8(a5)
+
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
 my_timer_b01:
-		REPT	7
+		REPT	3
 		move.l	(a5)+,(a6)+
 		ENDR
+
+		tst.l	0(a5)
+		tst.l	4(a5)
+		tst.l	8(a5)
 
 		move.l	#my_timer_b02,$120.w
 
@@ -292,7 +298,83 @@ my_timer_b01:
 		rte
 
 my_timer_b02:
-		REPT	8
+		REPT	3
+		move.l	(a5)+,(a6)+
+		ENDR
+
+		tst.l	0(a5)
+		tst.l	4(a5)
+		tst.l	8(a5)
+
+		move.l	#my_timer_b021,$120.w
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b021:
+		REPT	3
+		move.l	(a5)+,(a6)+
+		ENDR
+
+		tst.l	0(a5)
+		tst.l	4(a5)
+		tst.l	8(a5)
+
+		move.l	#my_timer_b022,$120.w
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b022:
+		REPT	3
+		move.l	(a5)+,(a6)+
+		ENDR
+
+		tst.l	0(a5)
+		tst.l	4(a5)
+		tst.l	8(a5)
+
+		move.l	#my_timer_b023,$120.w
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b023:
+		REPT	3
+		move.l	(a5)+,(a6)+
+		ENDR
+
+		tst.l	0(a5)
+		tst.l	4(a5)
+		tst.l	8(a5)
+
+		move.l	#my_timer_b03,$120.w
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b024:
+		REPT	2
+		move.l	(a5)+,(a6)+
+		ENDR
+
+		move.l	#my_timer_b025,$120.w
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b025:
+		REPT	2
+		move.l	(a5)+,(a6)+
+		ENDR
+
+		move.l	#my_timer_b026,$120.w
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+my_timer_b026:
+		REPT	1
 		move.l	(a5)+,(a6)+
 		ENDR
 
@@ -315,8 +397,8 @@ my_timer_b1:	move.l	(a5)+,(a6)+
 
 
 
-;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
-;		bne.b	.wait				; no, we are still on the right one
+.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+		bne.b	.wait				; no, we are still on the right one
 
 		move.b	plasma_video_ram+1(pc),$ffff8205.w
 		move.l	(a5)+,$ffff8206.w
@@ -333,8 +415,8 @@ my_timer_b2:	move.l	(a5)+,(a6)+
 
 		move.l	(a5)+,$120.w
 
-;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
-;		bne.b	.wait				; no, we are still on the right one
+.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+		bne.b	.wait				; no, we are still on the right one
 
 		move.l	(a5)+,$ffff8206.w
 
@@ -346,8 +428,8 @@ my_timer_b3:	clr.l	$ffff9800.w
 
 
 
-;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
-;		bne.b	.wait				; no, we are still on the right one
+.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+		bne.b	.wait				; no, we are still on the right one
 
 		;move.b	fuck+1(pc),$ffff8205.w
 		;move.b	fuck+2(pc),$ffff8207.w
@@ -399,8 +481,8 @@ my_timer_b6:	move.l	(a5),(a6)
 
 
 
-;.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
-;		bne.b	.wait				; no, we are still on the right one
+.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+		bne.b	.wait				; no, we are still on the right one
 
 		move.b	video_ram+1(pc),$ffff8205.w
 		move.b	video_ram+2(pc),$ffff8207.w
