@@ -93,22 +93,16 @@ begin:		movea.l	4(sp),a5			; address to basepage
 
 		lea	res256+122+2,a0
 		lea	res320+122+2,a1
-		lea	res064+122+2,a2
 		move.w	(a0)+,plasma_256_8284
 		move.w	(a1)+,plasma_320_8284
-		move.w	(a2)+,plasma_64_8284
 		move.w	(a0)+,plasma_256_8286
 		move.w	(a1)+,plasma_320_8286
-		move.w	(a2)+,plasma_64_8286
 		move.w	(a0)+,plasma_256_8288
 		move.w	(a1)+,plasma_320_8288
-		move.w	(a2)+,plasma_64_8288
 		move.w	(a0)+,plasma_256_828a
 		move.w	(a1)+,plasma_320_828a
-		move.w	(a2)+,plasma_64_828a
 		move.w	(24,a0),plasma_256_8210
 		move.w	(24,a1),plasma_320_8210
-		move.w	(24,a2),plasma_64_8210
 
 		lea	plasma_buffer_top+3*4,a1
 		move.l	#plasma_timer_b2,(a1)+
@@ -273,7 +267,7 @@ my_vbl:		movem.l	d0-a4,-(sp)
 
 		dbra	d7,.loop
 
-		move.l	#plasma_timer_b7,(-8,a4)
+		move.l	#plasma_timer_b6,(-8,a4)
 
 .offsets_done:	addq.w	#2,pal_counter
 		cmp.w	#16,pal_counter
@@ -353,7 +347,27 @@ plasma_timer_b5:
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-; repeat 5x (after last plasma raster line)
+; repeat 1x (after last plasma raster line)
+plasma_timer_b6:
+.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
+		bne.b	.wait				; no, we are still on the right one
+
+		move.b	fuck+1(pc),$ffff8205.w
+		move.b	fuck+2(pc),$ffff8207.w
+		move.b	fuck+3(pc),$ffff8209.w
+
+		move.l	#plasma_timer_b7,$120.w
+
+		tst.l	(a5)	; wow, ked toto vynecham, tak to robi artefakty na prave strane 320
+		tst.l	4(a5)
+		tst.l	8(a5)
+
+		bclr	#0,$fffffa0f.w			; clear in service bit
+		rte
+
+fuck:		dc.l	empty_space
+
+; repeat 5x
 plasma_timer_b7:
 		REPT	3
 		move.l	(a5)+,(a6)+
@@ -405,9 +419,10 @@ set_cache:	movec	cacr,d0
 		bset	#0,d0				; i cache on
 		;bclr	#0,d0
 		bset	#4,d0				; i burst on
-		;bclr	#4,d0
-		bclr	#8,d0				; d cache off
-		bclr	#12,d0				; d burst off
+		;bclr	#8,d0				; d cache off
+		;bclr	#12,d0				; d burst off
+		bset	#8,d0
+		bset	#12,d0
 		movec	d0,cacr
 		rts
 
@@ -546,7 +561,6 @@ wait_vbl:	move.w	#$25,-(sp)			; Vsync()
 ; ------------------------------------------------------
 
 		EVEN
-res064:		incbin	"scp\16\064240v4.scp"
 res256:		incbin	"scp\16\256240v4.scp"
 res320:		incbin	"scp\16\320240v4.scp"
 pal:		incbin	"atari800.pal"
@@ -596,12 +610,7 @@ plasma_320_8288:ds.w	1
 plasma_320_828a:ds.w	1
 plasma_320_8210:ds.w	1
 
-plasma_64_8284:	ds.w	1
-plasma_64_8286:	ds.w	1
-plasma_64_8288:	ds.w	1
-plasma_64_828a:	ds.w	1
-plasma_64_8210:	ds.w	1
-
+		ds.b	1024				; bez tohto su artefakty...
 empty_space:	ds.b	64*1024
 
 plasma_buffer_top:
