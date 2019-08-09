@@ -11,7 +11,7 @@ TBCR_VALUE	EQU	%1000				; event mode
 ;TBDR_VALUE	EQU	1				; every TBDR_VALUE raster lines
 
 PLASMA_WIDTH	EQU	256
-PLASMA_HEIGHT	EQU	150
+PLASMA_HEIGHT	EQU	144
 
 LOGO_WIDTH	EQU	SCREEN_WIDTH
 LOGO_HEIGHT	EQU	50
@@ -110,32 +110,19 @@ begin:		movea.l	4(sp),a5			; address to basepage
 		move.w	(24,a1),plasma_320_8210
 		move.w	(24,a2),plasma_64_8210
 
-		lea	logo_pal+1*4,a0			; skip background
-		lea	plasma_pal_buffer_top,a1
-
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
+		lea	plasma_buffer_top+3*4,a1
 		move.l	#plasma_timer_b2,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
+		lea	(3*4,a1),a1
 		move.l	#plasma_timer_b2,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
+		lea	(3*4,a1),a1
 		move.l	#plasma_timer_b2,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
+		lea	(3*4,a1),a1
 		move.l	#plasma_timer_b2,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
+		lea	(3*4,a1),a1
 		move.l	#plasma_timer_b4,(a1)+
 
 		lea	logo_pal,a0
-		lea	plasma_pal_buffer_bottom,a1
+		lea	plasma_buffer_bottom,a1
 
 		move.l	(a0)+,(a1)+
 		move.l	(a0)+,(a1)+
@@ -262,7 +249,7 @@ my_vbl:		movem.l	d0-a4,-(sp)
 
 		lea	falcon_pal+1*4,a0		; skip background
 		add.l	pal_offset,a0
-		lea	plasma_pal_buffer_top,a4
+		lea	plasma_buffer_top,a4
 		move.w	#5-1,d7
 .plasma_top_loop:
 		move.l	(a0)+,(a4)+
@@ -286,7 +273,6 @@ my_vbl:		movem.l	d0-a4,-(sp)
 
 		dbra	d7,.loop
 
-		move.l	#plasma_timer_b6,(-8-12,a4)
 		move.l	#plasma_timer_b7,(-8,a4)
 
 .offsets_done:	addq.w	#2,pal_counter
@@ -300,7 +286,10 @@ my_vbl:		movem.l	d0-a4,-(sp)
 
 		move.l	#224*4,pal_offset
 
-.done:		movem.l	(sp)+,d0-a4
+.done:		lea	plasma_buffer_top,a5
+		lea	$ffff9804.w,a6
+
+		movem.l	(sp)+,d0-a4
 		rte
 
 ; after last logo raster line
@@ -310,9 +299,6 @@ plasma_timer_b1:
 
 		move.l	plasma_256_8284(pc),$ffff8284.w	; $8284 & 8286
 		move.l	plasma_256_8288(pc),$ffff8288.w	; $8288 & 828a
-
-		lea	plasma_pal_buffer_top,a5
-		lea	$ffff9804.w,a6
 
 		move.l	#plasma_timer_b2,$120.w
 
@@ -353,7 +339,7 @@ plasma_timer_b4:
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
 
-; repeat PLASMA_HEIGHT-2 times
+; repeat PLASMA_HEIGHT-1 times
 plasma_timer_b5:
 		move.l	(a5)+,(a6)+
 
@@ -363,23 +349,6 @@ plasma_timer_b5:
 		bne.b	.wait				; no, we are still on the right one
 
 		move.l	(a5)+,$ffff8206.w
-
-		bclr	#0,$fffffa0f.w			; clear in service bit
-		rte
-
-; repeat 1x
-plasma_timer_b6:
-		move.l	(a5)+,(a6)+
-
-		move.l	(a5)+,$120.w
-
-.wait:		btst	#0,$ffff82a1.w			; left half-line? (low byte of VFC)
-		bne.b	.wait				; no, we are still on the right one
-
-		move.l	(a5)+,$ffff8206.w
-
-		lea	plasma_pal_buffer_bottom,a5
-		lea	$ffff9800.w,a6
 
 		bclr	#0,$fffffa0f.w			; clear in service bit
 		rte
@@ -635,7 +604,11 @@ plasma_64_8210:	ds.w	1
 
 empty_space:	ds.b	64*1024
 
-plasma_pal_buffer_top:
-		ds.l	5*(3+1)+PLASMA_HEIGHT*(1+1+1)	; 3x palette items, $120
-plasma_pal_buffer_bottom:
-		ds.l	6*(3+1)				; 3x palette items, $120
+plasma_buffer_top:
+		; 3x palette items, $120
+		ds.l	5*(3+1)				; 5 lines
+plasma_buffer:	; palette item, video m/l, $120
+		ds.l	PLASMA_HEIGHT*(1+1+1)		; PLASMA_HEIGHT lines
+plasma_buffer_bottom:
+		; 3x palette items, $120
+		ds.l	6*(3+1)				; 5 lines + 1 palette reg
